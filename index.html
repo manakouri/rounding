@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rounding Practice Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .feedback-correct {
+            color: #22c55e; /* green-500 */
+        }
+        .feedback-incorrect {
+            color: #ef4444; /* red-500 */
+        }
+        .card {
+            background-color: white;
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="card w-full max-w-lg text-center">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Rounding Practice</h1>
+        
+        <div id="question-area">
+            <p id="question-text" class="text-2xl text-gray-700 my-8 h-16 flex items-center justify-center"></p>
+            <div class="mt-4">
+                <input type="number" id="answer-input" class="w-full px-4 py-3 text-lg border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition" placeholder="Enter your answer">
+            </div>
+            <button id="submit-btn" class="w-full mt-4 bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-transform transform hover:scale-105">
+                Check Answer
+            </button>
+        </div>
+
+        <div id="result-area" class="hidden">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Round Complete!</h2>
+            <p class="text-lg text-gray-600 mb-2">Your score:</p>
+            <p id="score-text" class="text-4xl font-bold text-indigo-600 mb-6"></p>
+            <button id="restart-btn" class="w-full bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-transform transform hover:scale-105">
+                Practice Again
+            </button>
+        </div>
+
+        <div id="feedback-text" class="mt-4 h-6 text-lg font-medium"></div>
+
+    </div>
+
+    <script>
+        // --- DOM Element References ---
+        const questionText = document.getElementById('question-text');
+        const answerInput = document.getElementById('answer-input');
+        const submitBtn = document.getElementById('submit-btn');
+        const feedbackText = document.getElementById('feedback-text');
+        const questionArea = document.getElementById('question-area');
+        const resultArea = document.getElementById('result-area');
+        const scoreText = document.getElementById('score-text');
+        const restartBtn = document.getElementById('restart-btn');
+
+        // --- Game State ---
+        let questionsForRound = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        const NUM_QUESTIONS_PER_ROUND = 10;
+
+        /**
+         * Generates a random number and rounding target for a question.
+         */
+        function generateQuestion() {
+            const roundingTargets = [10, 100, 1000];
+            const target = roundingTargets[Math.floor(Math.random() * roundingTargets.length)];
+            
+            // Generate a number that isn't already a perfect multiple of the target
+            let number;
+            do {
+                // Ensure number is appropriate for the target
+                const min = target + 1;
+                const max = 9999;
+                number = Math.floor(Math.random() * (max - min + 1)) + min;
+            } while (number % target === 0);
+
+            const correctAnswer = Math.round(number / target) * target;
+            
+            return {
+                // UPDATE: Added spaces before and after the number for better readability.
+                display: `Round <strong class="text-indigo-600 text-3xl"> ${number.toLocaleString()} </strong> to the nearest ${target}`,
+                answer: correctAnswer
+            };
+        }
+
+        /**
+         * Generates a unique set of questions for a round.
+         */
+        function generateQuestionsForRound() {
+            questionsForRound = [];
+            const usedQuestions = new Set();
+            while (questionsForRound.length < NUM_QUESTIONS_PER_ROUND) {
+                const newQuestion = generateQuestion();
+                if (!usedQuestions.has(newQuestion.display)) {
+                    questionsForRound.push(newQuestion);
+                    usedQuestions.add(newQuestion.display);
+                }
+            }
+        }
+
+        /**
+         * Starts or restarts the quiz.
+         */
+        function startQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            
+            generateQuestionsForRound();
+            
+            resultArea.classList.add('hidden');
+            questionArea.classList.remove('hidden');
+            feedbackText.textContent = '';
+            answerInput.value = '';
+
+            displayQuestion();
+        }
+
+        /**
+         * Displays the current question to the user.
+         */
+        function displayQuestion() {
+            if (currentQuestionIndex < questionsForRound.length) {
+                questionText.innerHTML = questionsForRound[currentQuestionIndex].display;
+                answerInput.focus();
+            } else {
+                showResults();
+            }
+        }
+        
+        /**
+         * Shows the final results and the option to restart.
+         */
+        function showResults() {
+            questionArea.classList.add('hidden');
+            resultArea.classList.remove('hidden');
+            scoreText.textContent = `${score} / ${NUM_QUESTIONS_PER_ROUND}`;
+        }
+
+        /**
+         * Checks the user's submitted answer.
+         */
+        function checkAnswer() {
+            const userAnswer = parseInt(answerInput.value, 10);
+            const correctAnswer = questionsForRound[currentQuestionIndex].answer;
+
+            feedbackText.textContent = '';
+            feedbackText.classList.remove('feedback-correct', 'feedback-incorrect');
+
+            if (isNaN(userAnswer)) {
+                feedbackText.textContent = "Please enter a number.";
+                feedbackText.classList.add('feedback-incorrect');
+                return;
+            }
+
+            if (userAnswer === correctAnswer) {
+                feedbackText.textContent = "Correct!";
+                feedbackText.classList.add('feedback-correct');
+                score++;
+            } else {
+                feedbackText.textContent = `Not quite. The answer was ${correctAnswer.toLocaleString()}.`;
+                feedbackText.classList.add('feedback-incorrect');
+            }
+
+            currentQuestionIndex++;
+            setTimeout(() => {
+                feedbackText.textContent = '';
+                answerInput.value = '';
+                displayQuestion();
+            }, 1800);
+        }
+
+        // --- Event Listeners ---
+        submitBtn.addEventListener('click', checkAnswer);
+        
+        answerInput.addEventListener('keyup', (event) => {
+            if (event.key === 'Enter') {
+                checkAnswer();
+            }
+        });
+        
+        restartBtn.addEventListener('click', startQuiz);
+
+        // --- Initial Load ---
+        window.onload = startQuiz;
+    </script>
+</body>
+</html>
